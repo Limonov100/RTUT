@@ -1,0 +1,270 @@
+import { useState, useEffect, useRef } from "react";
+
+const REPOS = [
+  { name: "next.js", org: "vercel", desc: "The React Framework for the Web", lang: "TypeScript", color: "#3178c6", stars: "124k", forks: "26.4k", updated: "2ч назад", topics: ["react", "framework", "ssr"], private: false },
+  { name: "tailwindcss", org: "tailwindlabs", desc: "A utility-first CSS framework for rapid UI development", lang: "CSS", color: "#563d7c", stars: "82.1k", forks: "4.1k", updated: "5ч назад", topics: ["css", "utility", "design"], private: false },
+  { name: "vscode", org: "microsoft", desc: "Visual Studio Code — open source code editor", lang: "TypeScript", color: "#3178c6", stars: "165k", forks: "29k", updated: "1д назад", topics: ["editor", "ide", "electron"], private: false },
+  { name: "secret-project", org: "you", desc: "Work in progress 🔒", lang: "Rust", color: "#dea584", stars: "—", forks: "—", updated: "3д назад", topics: ["wip"], private: true },
+  { name: "react", org: "facebook", desc: "The library for web and native user interfaces", lang: "JavaScript", color: "#f1e05a", stars: "228k", forks: "46.6k", updated: "4д назад", topics: ["ui", "frontend", "library"], private: false },
+];
+
+const ACTIVITY = [
+  { type: "push", repo: "next.js", msg: "feat: add partial prerendering support", time: "2ч", color: "#3fb950" },
+  { type: "pr", repo: "tailwindcss", msg: "fix: dark mode variable leakage", time: "6ч", color: "#a371f7" },
+  { type: "star", repo: "vscode", msg: "starred microsoft/vscode", time: "1д", color: "#e3b341" },
+  { type: "issue", repo: "react", msg: "opened: Concurrent mode memory leak", time: "2д", color: "#f85149" },
+  { type: "fork", repo: "next.js", msg: "forked vercel/next.js", time: "3д", color: "#58a6ff" },
+];
+
+const CONTRIB = [
+  [1,3,0,2,4,1,0,2,3,1,0,3,2,4,1,2,0,3,1,2],
+  [0,2,4,1,3,0,2,1,4,2,0,3,1,2,0,4,1,3,2,0],
+  [3,1,2,0,4,2,1,3,0,2,4,1,2,0,3,1,4,2,0,3],
+  [2,4,0,3,1,2,0,4,3,1,2,0,3,2,1,4,0,2,3,1],
+  [1,0,3,2,4,0,3,1,2,4,0,3,1,0,2,4,3,1,2,0],
+];
+
+const LANGCOLORS = { TypeScript:"#3178c6", JavaScript:"#f1e05a", CSS:"#563d7c", Rust:"#dea584", Python:"#3572A5", Go:"#00ADD8" };
+
+function ContribGraph() {
+  const weeks = 20;
+  const days = 5;
+  return (
+    <div style={{ display:"flex", gap:3 }}>
+      {Array.from({length:weeks},(_,w)=>(
+        <div key={w} style={{ display:"flex", flexDirection:"column", gap:3 }}>
+          {Array.from({length:days},(_,d)=>{
+            const v = CONTRIB[d]?.[w] ?? 0;
+            const alpha = v===0?0.07:v===1?0.25:v===2?0.45:v===3?0.65:0.9;
+            return <div key={d} style={{ width:11,height:11,borderRadius:3,background:`rgba(63,185,80,${alpha})`,transition:"transform 0.15s" }} onMouseEnter={e=>e.target.style.transform="scale(1.4)"} onMouseLeave={e=>e.target.style.transform="scale(1)"}/>;
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RepoCard({ repo, idx }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ background: hov?"#161b22":"#0d1117", border:`1px solid ${hov?"#30363d":"#21262d"}`, borderRadius:14, padding:"18px 20px", cursor:"pointer", transition:"all 0.2s", transform: hov?"translateY(-2px)":"translateY(0)", boxShadow: hov?"0 8px 32px rgba(0,0,0,0.4)":"none", animation:`fadeUp 0.4s ease ${idx*0.07}s both` }}>
+      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:8 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <span style={{ fontSize:15 }}>{repo.private?"🔒":"📁"}</span>
+          <span style={{ color:"#58a6ff", fontWeight:700, fontSize:15, fontFamily:"'DM Mono', monospace" }}>{repo.org}/{repo.name}</span>
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:6, background:"#161b22", border:"1px solid #30363d", borderRadius:20, padding:"3px 10px", fontSize:12, color:"#8b949e" }}>
+          ⭐ {repo.stars}
+        </div>
+      </div>
+      <p style={{ margin:"0 0 12px", fontSize:13, color:"#8b949e", lineHeight:1.5, fontFamily:"'Instrument Serif', serif" }}>{repo.desc}</p>
+      <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:12 }}>
+        {repo.topics.map(t=>(
+          <span key={t} style={{ background:"#1f6feb22", border:"1px solid #1f6feb44", color:"#58a6ff", fontSize:11, padding:"2px 8px", borderRadius:20, fontFamily:"'DM Mono', monospace" }}>#{t}</span>
+        ))}
+      </div>
+      <div style={{ display:"flex", gap:14, fontSize:12, color:"#8b949e" }}>
+        <span style={{ display:"flex", alignItems:"center", gap:5 }}>
+          <span style={{ width:10,height:10,borderRadius:"50%",background:LANGCOLORS[repo.lang]||"#888",display:"inline-block" }}/>
+          {repo.lang}
+        </span>
+        <span>🍴 {repo.forks}</span>
+        <span style={{ marginLeft:"auto" }}>· {repo.updated}</span>
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  const [tab, setTab] = useState("overview");
+  const [search, setSearch] = useState("");
+  const [cmdOpen, setCmdOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const cmdRef = useRef(null);
+
+  useEffect(()=>{ setMounted(true); },[]);
+  useEffect(()=>{
+    const down = (e) => { if ((e.metaKey||e.ctrlKey) && e.key==="k") { e.preventDefault(); setCmdOpen(o=>!o); } if (e.key==="Escape") setCmdOpen(false); };
+    window.addEventListener("keydown",down);
+    return ()=>window.removeEventListener("keydown",down);
+  },[]);
+
+  const tabs = ["overview","repositories","projects","packages","stars"];
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#010409", color:"#e6edf3", fontFamily:"'DM Sans', sans-serif", opacity:mounted?1:0, transition:"opacity 0.5s" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#21262d;border-radius:4px}
+        input::placeholder{color:#484f58}
+      `}</style>
+
+      {/* Command palette */}
+      {cmdOpen && (
+        <div onClick={()=>setCmdOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(1,4,9,0.7)",backdropFilter:"blur(8px)",zIndex:100,display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:120,animation:"fadeIn 0.15s ease" }}>
+          <div onClick={e=>e.stopPropagation()} style={{ width:"100%",maxWidth:560,background:"#161b22",border:"1px solid #30363d",borderRadius:14,overflow:"hidden",boxShadow:"0 25px 80px rgba(0,0,0,0.8)",animation:"slideDown 0.2s ease" }}>
+            <div style={{ display:"flex",alignItems:"center",gap:10,padding:"14px 18px",borderBottom:"1px solid #21262d" }}>
+              <span style={{ color:"#484f58",fontSize:16 }}>⌕</span>
+              <input autoFocus placeholder="Найти репозиторий, пользователя, коммит..." style={{ flex:1,background:"none",border:"none",color:"#e6edf3",fontSize:15,fontFamily:"'DM Sans', sans-serif",outline:"none" }} value={search} onChange={e=>setSearch(e.target.value)}/>
+              <kbd style={{ background:"#21262d",border:"1px solid #30363d",borderRadius:6,padding:"2px 7px",fontSize:11,color:"#8b949e" }}>ESC</kbd>
+            </div>
+            {["next.js","react","vscode","tailwindcss"].filter(r=>!search||r.includes(search.toLowerCase())).map((r,i)=>(
+              <div key={r} style={{ display:"flex",alignItems:"center",gap:12,padding:"12px 18px",borderBottom:"1px solid #0d1117",cursor:"pointer",transition:"background 0.1s" }} onMouseEnter={e=>e.currentTarget.style.background="#1c2128"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                <span style={{ color:"#58a6ff",fontSize:13 }}>📁</span>
+                <span style={{ fontSize:14,fontFamily:"'DM Mono', monospace",color:"#e6edf3" }}>{r}</span>
+                <span style={{ marginLeft:"auto",fontSize:11,color:"#484f58" }}>репозиторий</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Navbar */}
+      <nav style={{ borderBottom:"1px solid #21262d",padding:"0 32px",position:"sticky",top:0,background:"rgba(1,4,9,0.92)",backdropFilter:"blur(20px)",zIndex:50,display:"flex",alignItems:"center",gap:24,height:62 }}>
+        {/* Logo */}
+        <div style={{ display:"flex",alignItems:"center",gap:10,fontWeight:600,fontSize:17,letterSpacing:-0.5,flexShrink:0 }}>
+          <svg height="28" viewBox="0 0 16 16" fill="#e6edf3"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          <span>GitHub</span>
+          <span style={{ background:"linear-gradient(135deg,#3fb950,#58a6ff)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",fontSize:11,fontWeight:700,letterSpacing:2 }}>NEXT</span>
+        </div>
+
+        {/* Search bar */}
+        <div onClick={()=>setCmdOpen(true)} style={{ flex:1,maxWidth:360,display:"flex",alignItems:"center",gap:8,background:"#0d1117",border:"1px solid #21262d",borderRadius:10,padding:"7px 12px",cursor:"pointer",transition:"border-color 0.2s" }} onMouseEnter={e=>e.currentTarget.style.borderColor="#388bfd"} onMouseLeave={e=>e.currentTarget.style.borderColor="#21262d"}>
+          <span style={{ color:"#484f58" }}>⌕</span>
+          <span style={{ color:"#484f58",fontSize:13,flex:1 }}>Поиск или перейти...</span>
+          <kbd style={{ background:"#161b22",border:"1px solid #21262d",borderRadius:5,padding:"1px 6px",fontSize:11,color:"#484f58" }}>⌘K</kbd>
+        </div>
+
+        {/* Nav links */}
+        <div style={{ display:"flex",gap:2,marginLeft:8 }}>
+          {["Pull requests","Issues","Explore"].map(l=>(
+            <button key={l} style={{ background:"none",border:"none",color:"#e6edf3",fontSize:13,padding:"6px 12px",borderRadius:8,cursor:"pointer",transition:"background 0.15s",fontFamily:"'DM Sans', sans-serif" }} onMouseEnter={e=>e.target.style.background="#161b22"} onMouseLeave={e=>e.target.style.background="none"}>{l}</button>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div style={{ marginLeft:"auto",display:"flex",gap:10,alignItems:"center" }}>
+          <button style={{ background:"#238636",border:"1px solid #2ea043",color:"#fff",borderRadius:8,padding:"6px 14px",fontSize:13,cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:6,fontFamily:"'DM Sans', sans-serif",transition:"background 0.15s" }} onMouseEnter={e=>e.currentTarget.style.background="#2ea043"} onMouseLeave={e=>e.currentTarget.style.background="#238636"}>
+            + Новый
+          </button>
+          <div style={{ width:34,height:34,borderRadius:"50%",background:"linear-gradient(135deg,#58a6ff,#3fb950)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,cursor:"pointer",border:"2px solid #21262d" }}>ВЫ</div>
+        </div>
+      </nav>
+
+      {/* Profile header */}
+      <div style={{ background:"linear-gradient(180deg,#0d1117 0%,#010409 100%)",borderBottom:"1px solid #21262d",padding:"40px 32px 0",animation:"fadeUp 0.5s ease" }}>
+        <div style={{ maxWidth:1200,margin:"0 auto",display:"flex",gap:32,alignItems:"flex-start" }}>
+          {/* Avatar */}
+          <div style={{ position:"relative",flexShrink:0 }}>
+            <div style={{ width:100,height:100,borderRadius:"50%",background:"linear-gradient(135deg,#58a6ff,#3fb950,#a371f7)",padding:3 }}>
+              <div style={{ width:"100%",height:"100%",borderRadius:"50%",background:"#161b22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,fontWeight:800,fontFamily:"'DM Mono', monospace",color:"#e6edf3" }}>ВЫ</div>
+            </div>
+            <div style={{ position:"absolute",bottom:4,right:4,width:16,height:16,borderRadius:"50%",background:"#3fb950",border:"3px solid #010409" }}/>
+          </div>
+
+          {/* Info */}
+          <div style={{ flex:1 }}>
+            <div style={{ display:"flex",alignItems:"baseline",gap:10,marginBottom:4 }}>
+              <h1 style={{ fontSize:26,fontWeight:700,letterSpacing:-0.8 }}>Ваше Имя</h1>
+              <span style={{ color:"#8b949e",fontSize:18,fontFamily:"'DM Mono', monospace" }}>@username</span>
+            </div>
+            <p style={{ color:"#8b949e",fontSize:15,marginBottom:16,fontFamily:"'Instrument Serif', serif",fontStyle:"italic" }}>Строю будущее, один коммит за раз · Открыт к коллаборациям</p>
+            <div style={{ display:"flex",gap:20,fontSize:13,color:"#8b949e",marginBottom:20 }}>
+              <span>📍 Москва</span>
+              <span>🔗 example.dev</span>
+              <span>· <b style={{color:"#e6edf3"}}>234</b> подписчиков</span>
+              <span>· <b style={{color:"#e6edf3"}}>89</b> подписок</span>
+            </div>
+            <div style={{ display:"flex",gap:8 }}>
+              <button style={{ background:"#21262d",border:"1px solid #30363d",color:"#e6edf3",borderRadius:8,padding:"6px 16px",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",transition:"all 0.15s" }} onMouseEnter={e=>e.currentTarget.style.background="#30363d"} onMouseLeave={e=>e.currentTarget.style.background="#21262d"}>Редактировать профиль</button>
+              <button style={{ background:"#21262d",border:"1px solid #30363d",color:"#e6edf3",borderRadius:8,padding:"6px 12px",fontSize:15,cursor:"pointer",transition:"all 0.15s" }} onMouseEnter={e=>e.currentTarget.style.background="#30363d"} onMouseLeave={e=>e.currentTarget.style.background="#21262d"}>⚙</button>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div style={{ display:"flex",gap:12,flexShrink:0 }}>
+            {[{label:"Репозитории",val:"47"},{label:"Звёзды",val:"1.2k"},{label:"Коммиты",val:"2,841"}].map(s=>(
+              <div key={s.label} style={{ background:"#0d1117",border:"1px solid #21262d",borderRadius:12,padding:"14px 20px",textAlign:"center",minWidth:90 }}>
+                <div style={{ fontSize:22,fontWeight:800,fontFamily:"'DM Mono', monospace",color:"#e6edf3",letterSpacing:-1 }}>{s.val}</div>
+                <div style={{ fontSize:11,color:"#484f58",marginTop:2,textTransform:"uppercase",letterSpacing:1 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ maxWidth:1200,margin:"24px auto 0",display:"flex",gap:2 }}>
+          {tabs.map(t=>(
+            <button key={t} onClick={()=>setTab(t)} style={{ background:"none",border:"none",borderBottom:`2px solid ${tab===t?"#f78166":"transparent"}`,color:tab===t?"#e6edf3":"#8b949e",padding:"10px 18px",cursor:"pointer",fontSize:14,fontWeight:tab===t?600:400,fontFamily:"'DM Sans', sans-serif",transition:"all 0.15s",textTransform:"capitalize",letterSpacing:0.2 }}>{t}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div style={{ maxWidth:1200,margin:"0 auto",padding:"28px 32px",display:"grid",gridTemplateColumns:"1fr 320px",gap:24 }}>
+
+        {/* Left col */}
+        <div>
+          {/* Contribution graph */}
+          <div style={{ background:"#0d1117",border:"1px solid #21262d",borderRadius:14,padding:"20px 22px",marginBottom:24,animation:"fadeUp 0.5s ease 0.1s both" }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
+              <span style={{ fontSize:14,color:"#8b949e" }}><b style={{color:"#e6edf3"}}>1,247</b> вкладов за последний год</span>
+              <select style={{ background:"#161b22",border:"1px solid #30363d",color:"#8b949e",borderRadius:6,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans', sans-serif",cursor:"pointer" }}>
+                <option>2024–2025</option>
+              </select>
+            </div>
+            <ContribGraph/>
+            <div style={{ display:"flex",justifyContent:"flex-end",alignItems:"center",gap:6,marginTop:12,fontSize:11,color:"#484f58" }}>
+              <span>Меньше</span>
+              {[0.07,0.25,0.45,0.65,0.9].map((a,i)=>(
+                <div key={i} style={{ width:11,height:11,borderRadius:3,background:`rgba(63,185,80,${a})` }}/>
+              ))}
+              <span>Больше</span>
+            </div>
+          </div>
+
+          {/* Repos */}
+          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14 }}>
+            <h2 style={{ fontSize:16,fontWeight:700 }}>Закреплённые репозитории</h2>
+            <button style={{ background:"none",border:"1px solid #30363d",color:"#58a6ff",borderRadius:6,padding:"4px 12px",fontSize:12,cursor:"pointer",fontFamily:"'DM Sans', sans-serif" }}>Настроить</button>
+          </div>
+          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:14 }}>
+            {REPOS.slice(0,4).map((r,i)=><RepoCard key={r.name} repo={r} idx={i}/>)}
+          </div>
+        </div>
+
+        {/* Right col */}
+        <div style={{ display:"flex",flexDirection:"column",gap:20 }}>
+          {/* Activity */}
+          <div style={{ background:"#0d1117",border:"1px solid #21262d",borderRadius:14,padding:"18px 20px",animation:"fadeUp 0.5s ease 0.2s both" }}>
+            <h3 style={{ fontSize:14,fontWeight:700,marginBottom:16,color:"#e6edf3" }}>Активность</h3>
+            {ACTIVITY.map((a,i)=>(
+              <div key={i} style={{ display:"flex",gap:10,alignItems:"flex-start",padding:"9px 0",borderBottom:i<ACTIVITY.length-1?"1px solid #0d1117":"none" }}>
+                <div style={{ width:28,height:28,borderRadius:8,background:`${a.color}1a`,border:`1px solid ${a.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0 }}>
+                  {a.type==="push"?"↑":a.type==="pr"?"⇄":a.type==="star"?"★":a.type==="issue"?"◎":"⑂"}
+                </div>
+                <div style={{ flex:1,minWidth:0 }}>
+                  <div style={{ fontSize:12,color:"#8b949e",marginBottom:1 }}>{a.msg}</div>
+                  <div style={{ fontSize:11,color:"#484f58",fontFamily:"'DM Mono', monospace" }}>{a.repo} · {a.time}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Languages */}
+          <div style={{ background:"#0d1117",border:"1px solid #21262d",borderRadius:14,padding:"18px 20px",animation:"fadeUp 0.5s ease 0.3s both" }}>
+            <h3 style={{ fontSize:14,fontWeight:700,marginBottom:14,color:"#e6edf3" }}>Языки</h3>
+            <div style={{ display:"flex",gap:2,borderRadius:6,overflow:"hidden",height:8,marginBottom:14 }}>
+              {[["TypeScript",45,"#3178c6"],["JavaScript",28,"#f1e05a"],["CSS",15,"#563d7c"],["Rust",12,"#dea584"]].map(([l,p,c])=>(
+                <div key={l} style={{ width:`${p}%`,background:c,transition:"width 0.5s" }}/>
+              ))}
+            </div>
+            {[["TypeScript",45,"#3178c6"],["JavaScript",28,"#f1e05a"],["CSS",15,"#563d7c"],["Rust",12,"#dea584"]].map(([l,p,c])=>(
+              <div key={l} style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8,fontSize:13 }}>
+                <div style={{ width:10,height:10,borderRadius:"50%",background:c,flexShrink:0 }}/>
+                <span style={{ color:"#e6edf3",flex:1 }}>{l}</span>
+                <span style={{ color:"#484f58",f
